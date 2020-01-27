@@ -33,18 +33,18 @@ func (wfc *WorkflowController) ResyncConfig() error {
 
 func (wfc *WorkflowController) updateConfig(cm *apiv1.ConfigMap) error {
 	configStr, ok := cm.Data[common.WorkflowControllerConfigMapKey]
-	if !ok {
-		log.Warnf("ConfigMap '%s' does not have key '%s'", wfc.configMap, common.WorkflowControllerConfigMapKey)
-		return nil
-	}
 	var config config.WorkflowControllerConfig
-	err := yaml.Unmarshal([]byte(configStr), &config)
-	if err != nil {
-		return errors.InternalWrapError(err)
+	if ok {
+		err := yaml.Unmarshal([]byte(configStr), &config)
+		if err != nil {
+			return errors.InternalWrapError(err)
+		}
+		log.Printf("workflow controller configuration from %s:\n%s", wfc.configMap, configStr)
+	} else {
+		log.Infof("ConfigMap '%s' does not have key '%s', using defaults", wfc.configMap, common.WorkflowControllerConfigMapKey)
 	}
-	log.Printf("workflow controller configuration from %s:\n%s", wfc.configMap, configStr)
 	if wfc.cliExecutorImage == "" && config.ExecutorImage == "" {
-		return errors.Errorf(errors.CodeBadRequest, "ConfigMap '%s' does not have executorImage", wfc.configMap)
+		return errors.Errorf(errors.CodeBadRequest, "ConfigMap '%s' does not have executorImage and it's not specified on the command line", wfc.configMap)
 	}
 	wfc.Config = config
 
